@@ -1,0 +1,17 @@
+name: t_http
+description: A lightweight Dart HTTP client library, designed like Dio,
+  supporting request/response interceptors, upload/download progress,
+  cancel tokens, timeout management, and multipart file upload/download.
+version: 0.1.0
+repository: https://github.com/ThanCoder/t_http
+
+environment:
+  sdk: ^3.9.0
+
+# Add regular dependencies here.
+dependencies:
+  # path: ^1.9.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6
