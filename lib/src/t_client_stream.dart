@@ -46,7 +46,7 @@ Stream<UploadStreamProgress> httpUploadStream(
   TClient client, {
   required String path,
   required File file,
-  TCancelToken? cancelToken,
+  TClientToken? token,
 }) {
   final controller = StreamController<UploadStreamProgress>();
   (() async {
@@ -60,7 +60,7 @@ Stream<UploadStreamProgress> httpUploadStream(
       await client.upload(
         path,
         file: file,
-        cancelToken: cancelToken,
+        token: token,
         onUploadProgress: (sent, total) {
           double progress = total > 0 ? (sent / total) : 0.0;
           controller.add(
@@ -118,7 +118,7 @@ Stream<DownloadStreamProgress> httpDownloadStream(
   TClient client,
   String path, {
   required String savePath,
-  TCancelToken? cancelToken,
+  TClientToken? token,
   Map<String, String>? query,
   Map<String, String>? headers,
 }) {
@@ -132,7 +132,7 @@ Stream<DownloadStreamProgress> httpDownloadStream(
       await client.download(
         path,
         savePath: savePath,
-        cancelToken: cancelToken,
+        token: token,
         query: query,
         headers: headers,
         onReceiveProgressSpeed: (progress, speed, eta) {

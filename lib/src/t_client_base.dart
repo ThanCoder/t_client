@@ -29,20 +29,31 @@ class TClientResponse {
   });
 }
 
-class TCancelToken {
+class TClientToken {
   final bool isCancelFileDelete;
   final String onCancelMessage;
 
   bool _isCanceled = false;
-  TCancelToken({
+  bool _isPaused = false;
+
+  TClientToken({
     this.isCancelFileDelete = true,
     this.onCancelMessage = 'Token Canceled',
   });
 
   bool get isCanceled => _isCanceled;
+  bool get isPaused => _isPaused;
 
   void cancel() {
     _isCanceled = true;
+  }
+
+  void pause() {
+    _isPaused = true;
+  }
+
+  void resume() {
+    _isPaused = false;
   }
 }
 

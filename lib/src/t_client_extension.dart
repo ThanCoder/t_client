@@ -64,7 +64,7 @@ extension ParseDuration on Duration {
     if (inSeconds > 60) {
       return '$inMinutes Minutes';
     }
-    if (inMilliseconds > 1000) {
+    if (inMilliseconds >= 1000) {
       return '$inSeconds S';
     }
 

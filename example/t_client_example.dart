@@ -1,23 +1,32 @@
-import 'dart:io';
-
+import 'package:t_client/src/t_client_logger.dart';
 import 'package:t_client/t_client.dart';
 
 void main() async {
-  final fileUrl =
-      'http://10.37.17.103:9000/download?path=/storage/emulated/0/Movies/SavedMovies/The.Sandman.S02E07.Time.and.Night.REPACK.mp4';
-  final client = TClient();
-  await client.downloadResume(
-    fileUrl,
-    savePath: '/home/than/Pictures/${fileUrl.getName()}',
-    onError: (message) {
-      print('error: $message');
-    },
-    onReceiveProgressSpeed: (progress, speed, eta) {
-      print(
-        'Progress: ${(progress * 100).toStringAsFixed(2)}% | Speed: ${speed.formatSpeed()} | Left: ${eta?.toAutoTimeLabel()}',
-      );
+  TClientLogger.instance.init(
+    onMessageLog: (message) {
+      print(message);
     },
   );
+
+  final fileUrl =
+      'http://localhost:8080/download?path=/home/than/Videos/I.Am.What.I.Am.2021.mp4';
+
+  final client = TClient();
+  // await client.download(
+  //   fileUrl,
+  //   savePath: '/home/than/Pictures/${fileUrl.getName()}',
+  //   onError: (message) {
+  //     print('error: $message');
+  //   },
+  //   onReceiveProgressSpeed: (progress, speed, eta) {
+  //     print(
+  //       'Progress: ${(progress * 100).toStringAsFixed(2)}% | Speed: ${speed.formatSpeed()} | Left: ${eta?.toAutoTimeLabel()}',
+  //     );
+  //   },
+  // );
+
+  // print('downloaded');
+
   // final downloadStream = thttp.downloadStream(
   //   fileUrl,
   //   savePath: '/home/than/Pictures/test.mp4',

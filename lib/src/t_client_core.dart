@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:t_client/src/t_client_logger.dart';
+
 import 'index.dart';
 
 typedef Interceptor =
@@ -79,82 +81,14 @@ class TClient {
     required String savePath,
     Map<String, String>? query,
     Map<String, String>? headers,
-    TCancelToken? cancelToken,
+    TClientToken? token,
     OnCancelCallback? onCancelCallback,
     void Function(String message)? onError,
     OnReceiveProgressCallback? onReceiveProgress,
     OnReceiveProgressSpeedCallback? onReceiveProgressSpeed,
   }) async {
     final file = File(savePath);
-    final sink = file.openWrite();
-    try {
-      final uri = Uri.parse(
-        '${options.baseUrl}$path',
-      ).replace(queryParameters: query);
-      // timeout
-      final request = await client.getUrl(uri).timeout(options.sendTimeout);
-
-      // Default + custom headers
-      final allHeaders = {...options.headers, ...?headers};
-      allHeaders.forEach((key, value) => request.headers.set(key, value));
-
-      final response = await request.close().timeout(options.receiveTimeout);
-
-      int received = 0;
-      final total = response.contentLength;
-      final startTime = DateTime.now();
-
-      await response.forEach((chunk) {
-        if (cancelToken?.isCanceled ?? false) {
-          sink.close();
-          client.close();
-          if (cancelToken!.isCancelFileDelete) {
-            file.deleteSync(); // Delete partial file
-          }
-          onCancelCallback?.call(cancelToken.onCancelMessage);
-          throw Exception(cancelToken.onCancelMessage);
-        }
-
-        received += chunk.length;
-        sink.add(chunk);
-        // progress
-        if (onReceiveProgressSpeed != null && total > 0) {
-          final elapsed = DateTime.now().difference(startTime);
-          final elapsedSec = elapsed.inMilliseconds / 1000.0;
-          final speed = elapsedSec > 0
-              ? received / elapsedSec
-              : 0.0; // bytes per second
-          final eta = speed > 0
-              ? Duration(seconds: ((total - received) / speed).round())
-              : null;
-          onReceiveProgressSpeed.call((received / total), speed, eta);
-        }
-
-        if (onReceiveProgress != null && total > 0) {
-          onReceiveProgress(received, total);
-        }
-      });
-    } catch (e) {
-      onError?.call(e.toString());
-    } finally {
-      await sink.close();
-      client.close();
-    }
-    return file;
-  }
-
-  Future<File> downloadResume(
-    String path, {
-    required String savePath,
-    Map<String, String>? query,
-    Map<String, String>? headers,
-    TCancelToken? cancelToken,
-    OnCancelCallback? onCancelCallback,
-    void Function(String message)? onError,
-    OnReceiveProgressCallback? onReceiveProgress,
-    OnReceiveProgressSpeedCallback? onReceiveProgressSpeed,
-  }) async {
-    final file = File(savePath);
+    int downloadedLength = file.existsSync() ? await file.length() : 0;
 
     try {
       final uri = Uri.parse(
@@ -167,28 +101,66 @@ class TClient {
       final allHeaders = {...options.headers, ...?headers};
       allHeaders.forEach((key, value) => request.headers.set(key, value));
 
-      final response = await request.close().timeout(options.receiveTimeout);
-
-      // ရှိနေပြီးသားဆိုရင် length ထည့်မယ်
-      int downloadedLength = 0;
-      final total = response.contentLength;
-      if (file.existsSync()) {
-        downloadedLength = await file.length();
+      if (downloadedLength > 0) {
+        // Range header ထည့် → offset ကနေစပြီး တောင်း
+        request.headers.set('Range', 'bytes=$downloadedLength-');
       }
+
+      final response = await request.close().timeout(options.receiveTimeout);
       // progress
       int received = 0;
+      int total = response.contentLength;
       final startTime = DateTime.now();
+      // header
+      final contentRange = response.headers.value(
+        HttpHeaders.contentRangeHeader,
+      );
+      if (contentRange != null) {
+        // Content-Range: bytes 1000-9999/50000
+        final match = RegExp(r'bytes \d+-\d+/(\d+)').firstMatch(contentRange);
+        if (match != null) {
+          total = int.parse(match.group(1)!);
+        }
+      }
 
       if (response.statusCode == 206) {
-        if (downloadedLength > 0) {
-          // Range header ထည့် → offset ကနေစပြီး တောင်း
-          request.headers.set('Range', 'bytes=$downloadedLength-');
-        }
         // Server support
-        print("Resume with Range OK");
+        TClientLogger.instance.showLog(
+          "Resume with Range OK",
+          tag: 'downloadResume',
+        );
+        received = downloadedLength;
         final raf = file.openSync(mode: FileMode.append);
         await response.forEach((chunk) {
+          // cancel token
+          if (token?.isCanceled ?? false) {
+            raf.close();
+            client.close();
+            if (token!.isCancelFileDelete) {
+              file.deleteSync(); // Delete partial file
+            }
+            onCancelCallback?.call(token.onCancelMessage);
+            throw Exception(token.onCancelMessage);
+          }
+          // write
           raf.writeFromSync(chunk);
+          received += chunk.length;
+          // progress
+          if (onReceiveProgressSpeed != null && total > 0) {
+            final elapsed = DateTime.now().difference(startTime);
+            final elapsedSec = elapsed.inMilliseconds / 1000.0;
+            final speed = elapsedSec > 0
+                ? received / elapsedSec
+                : 0.0; // bytes per second
+            final eta = speed > 0
+                ? Duration(seconds: ((total - received) / speed).round())
+                : null;
+            onReceiveProgressSpeed.call((received / total), speed, eta);
+          }
+
+          if (onReceiveProgress != null && total > 0) {
+            onReceiveProgress(received, total);
+          }
         });
         await raf.close();
       }
@@ -202,14 +174,14 @@ class TClient {
         int skipped = 0;
         await response.forEach((chunk) {
           // cancel token
-          if (cancelToken?.isCanceled ?? false) {
+          if (token?.isCanceled ?? false) {
             raf.close();
             client.close();
-            if (cancelToken!.isCancelFileDelete) {
+            if (token!.isCancelFileDelete) {
               file.deleteSync(); // Delete partial file
             }
-            onCancelCallback?.call(cancelToken.onCancelMessage);
-            throw Exception(cancelToken.onCancelMessage);
+            onCancelCallback?.call(token.onCancelMessage);
+            throw Exception(token.onCancelMessage);
           }
 
           received += chunk.length;
@@ -235,7 +207,10 @@ class TClient {
             // စစ်ဆေး
             if (chunk.length <= remain) {
               skipped += chunk.length;
-              print("skip ${chunk.length} bytes");
+              TClientLogger.instance.showLog(
+                "skip ${chunk.length} bytes",
+                tag: 'downloadResume',
+              );
               return; // skip this chunk completely
             } else {
               // raf.setPositionSync(downloadedLength);
@@ -250,6 +225,7 @@ class TClient {
         await raf.close();
       }
     } catch (e) {
+      TClientLogger.instance.showLog(e.toString(), tag: 'downloadResume');
       onError?.call(e.toString());
     }
     return file;
@@ -265,7 +241,7 @@ class TClient {
     void Function(int sent, int total)? onUploadProgress,
     OnCancelCallback? onCancelCallback,
     void Function(String message)? onError,
-    TCancelToken? cancelToken,
+    TClientToken? token,
   }) async {
     try {
       final uri = Uri.parse(
@@ -311,10 +287,10 @@ class TClient {
 
       final fileStream = file.openRead();
       await for (var chunk in fileStream) {
-        if (cancelToken?.isCanceled ?? false) {
+        if (token?.isCanceled ?? false) {
           client.close(force: true);
-          onCancelCallback?.call(cancelToken!.onCancelMessage);
-          throw Exception(cancelToken!.onCancelMessage);
+          onCancelCallback?.call(token!.onCancelMessage);
+          throw Exception(token!.onCancelMessage);
         }
         request.add(chunk);
         await request.flush(); // ensure chunk is actually sent
@@ -337,6 +313,7 @@ class TClient {
         data: responseBody,
       );
     } catch (e) {
+      TClientLogger.instance.showLog(e.toString(), tag: 'upload');
       onError?.call(e.toString());
     } finally {
       client.close();
@@ -385,14 +362,9 @@ class TClient {
   Stream<UploadStreamProgress> uploadStream(
     String path, {
     required File file,
-    TCancelToken? cancelToken,
+    TClientToken? token,
   }) {
-    return httpUploadStream(
-      this,
-      path: path,
-      file: file,
-      cancelToken: cancelToken,
-    );
+    return httpUploadStream(this, path: path, file: file, token: token);
   }
 
   ///
@@ -401,7 +373,7 @@ class TClient {
   Stream<DownloadStreamProgress> downloadStream(
     String path, {
     required String savePath,
-    TCancelToken? cancelToken,
+    TClientToken? token,
     Map<String, String>? query,
     Map<String, String>? headers,
   }) {
@@ -409,7 +381,7 @@ class TClient {
       this,
       path,
       savePath: savePath,
-      cancelToken: cancelToken,
+      token: token,
       headers: headers,
       query: query,
     );
