@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 
-class THttpOptions {
+class TClientOptions {
   final String baseUrl;
   final Map<String, String> headers;
   final Duration connectTimeout;
@@ -8,7 +8,7 @@ class THttpOptions {
   final Duration receiveTimeout;
   final String? proxy;
 
-  const THttpOptions({
+  const TClientOptions({
     this.baseUrl = '',
     this.headers = const {},
     this.connectTimeout = const Duration(seconds: 10),
@@ -18,11 +18,11 @@ class THttpOptions {
   });
 }
 
-class THttpResponse {
+class TClientResponse {
   final int statusCode;
   final Map<String, String> headers;
   final dynamic data;
-  THttpResponse({
+  TClientResponse({
     required this.statusCode,
     required this.headers,
     required this.data,

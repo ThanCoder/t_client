@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:t_http/t_http.dart';
+import 'index.dart';
 
 typedef Interceptor =
     FutureOr<HttpResponse> Function(
@@ -15,12 +15,12 @@ typedef OnReceiveProgressSpeedCallback =
     void Function(double progress, double speed, Duration? eta);
 typedef OnCancelCallback = void Function(String message);
 
-class THttp {
-  final THttpOptions options;
+class TClient {
+  final TClientOptions options;
   final HttpClient client;
 
-  THttp({HttpClient? client, THttpOptions? options})
-    : options = options ?? const THttpOptions(),
+  TClient({HttpClient? client, TClientOptions? options})
+    : options = options ?? const TClientOptions(),
       client = HttpClient() {
     // Apply proxy if provided
     if (this.options.proxy != null) {
@@ -33,7 +33,7 @@ class THttp {
   }
 
   /// GET request
-  Future<THttpResponse> get(
+  Future<TClientResponse> get(
     String path, {
     Map<String, String>? query,
     Map<String, String>? headers,
@@ -42,7 +42,7 @@ class THttp {
   }
 
   /// POST request
-  Future<THttpResponse> post(
+  Future<TClientResponse> post(
     String path, {
     Map<String, String>? query,
     Object? data,
@@ -52,7 +52,7 @@ class THttp {
   }
 
   /// POST request
-  Future<THttpResponse> put(
+  Future<TClientResponse> put(
     String path, {
     Map<String, String>? query,
     Object? data,
@@ -62,7 +62,7 @@ class THttp {
   }
 
   /// POST request
-  Future<THttpResponse> delete(
+  Future<TClientResponse> delete(
     String path, {
     Object? data,
     Map<String, String>? query,
@@ -71,37 +71,39 @@ class THttp {
     return _send('DELETE', path, body: data, headers: headers, query: query);
   }
 
+  ///
   /// File download with progress
+  ///
   Future<File> download(
     String path, {
     required String savePath,
     Map<String, String>? query,
     Map<String, String>? headers,
+    TCancelToken? cancelToken,
+    OnCancelCallback? onCancelCallback,
+    void Function(String message)? onError,
     OnReceiveProgressCallback? onReceiveProgress,
     OnReceiveProgressSpeedCallback? onReceiveProgressSpeed,
-    OnCancelCallback? onCancelCallback,
-    TCancelToken? cancelToken,
-    void Function(String message)? onError,
   }) async {
-    final uri = Uri.parse(
-      '${options.baseUrl}$path',
-    ).replace(queryParameters: query);
-    // timeout
-    final request = await client.getUrl(uri).timeout(options.sendTimeout);
-
-    // Default + custom headers
-    final allHeaders = {...options.headers, ...?headers};
-    allHeaders.forEach((key, value) => request.headers.set(key, value));
-
-    final response = await request.close().timeout(options.receiveTimeout);
     final file = File(savePath);
     final sink = file.openWrite();
-
-    int received = 0;
-    final total = response.contentLength;
-    final startTime = DateTime.now();
-
     try {
+      final uri = Uri.parse(
+        '${options.baseUrl}$path',
+      ).replace(queryParameters: query);
+      // timeout
+      final request = await client.getUrl(uri).timeout(options.sendTimeout);
+
+      // Default + custom headers
+      final allHeaders = {...options.headers, ...?headers};
+      allHeaders.forEach((key, value) => request.headers.set(key, value));
+
+      final response = await request.close().timeout(options.receiveTimeout);
+
+      int received = 0;
+      final total = response.contentLength;
+      final startTime = DateTime.now();
+
       await response.forEach((chunk) {
         if (cancelToken?.isCanceled ?? false) {
           sink.close();
@@ -115,7 +117,7 @@ class THttp {
 
         received += chunk.length;
         sink.add(chunk);
-
+        // progress
         if (onReceiveProgressSpeed != null && total > 0) {
           final elapsed = DateTime.now().difference(startTime);
           final elapsedSec = elapsed.inMilliseconds / 1000.0;
@@ -125,7 +127,7 @@ class THttp {
           final eta = speed > 0
               ? Duration(seconds: ((total - received) / speed).round())
               : null;
-          onReceiveProgressSpeed.call(((received / total) * 100), speed, eta);
+          onReceiveProgressSpeed.call((received / total), speed, eta);
         }
 
         if (onReceiveProgress != null && total > 0) {
@@ -141,8 +143,120 @@ class THttp {
     return file;
   }
 
+  Future<File> downloadResume(
+    String path, {
+    required String savePath,
+    Map<String, String>? query,
+    Map<String, String>? headers,
+    TCancelToken? cancelToken,
+    OnCancelCallback? onCancelCallback,
+    void Function(String message)? onError,
+    OnReceiveProgressCallback? onReceiveProgress,
+    OnReceiveProgressSpeedCallback? onReceiveProgressSpeed,
+  }) async {
+    final file = File(savePath);
+
+    try {
+      final uri = Uri.parse(
+        '${options.baseUrl}$path',
+      ).replace(queryParameters: query);
+      // timeout
+      final request = await client.getUrl(uri).timeout(options.sendTimeout);
+
+      // Default + custom headers
+      final allHeaders = {...options.headers, ...?headers};
+      allHeaders.forEach((key, value) => request.headers.set(key, value));
+
+      final response = await request.close().timeout(options.receiveTimeout);
+
+      // ရှိနေပြီးသားဆိုရင် length ထည့်မယ်
+      int downloadedLength = 0;
+      final total = response.contentLength;
+      if (file.existsSync()) {
+        downloadedLength = await file.length();
+      }
+      // progress
+      int received = 0;
+      final startTime = DateTime.now();
+
+      if (response.statusCode == 206) {
+        if (downloadedLength > 0) {
+          // Range header ထည့် → offset ကနေစပြီး တောင်း
+          request.headers.set('Range', 'bytes=$downloadedLength-');
+        }
+        // Server support
+        print("Resume with Range OK");
+        final raf = file.openSync(mode: FileMode.append);
+        await response.forEach((chunk) {
+          raf.writeFromSync(chunk);
+        });
+        await raf.close();
+      }
+      // Server not support → overwrite trick
+      else if (response.statusCode == 200) {
+        // Server က file တစ်ခုလုံးပေးတာ
+
+        //print("Server no Range, fallback merge");
+        final raf = file.openSync(mode: FileMode.writeOnlyAppend);
+
+        int skipped = 0;
+        await response.forEach((chunk) {
+          // cancel token
+          if (cancelToken?.isCanceled ?? false) {
+            raf.close();
+            client.close();
+            if (cancelToken!.isCancelFileDelete) {
+              file.deleteSync(); // Delete partial file
+            }
+            onCancelCallback?.call(cancelToken.onCancelMessage);
+            throw Exception(cancelToken.onCancelMessage);
+          }
+
+          received += chunk.length;
+          // progress
+          if (onReceiveProgressSpeed != null && total > 0) {
+            final elapsed = DateTime.now().difference(startTime);
+            final elapsedSec = elapsed.inMilliseconds / 1000.0;
+            final speed = elapsedSec > 0
+                ? received / elapsedSec
+                : 0.0; // bytes per second
+            final eta = speed > 0
+                ? Duration(seconds: ((total - received) / speed).round())
+                : null;
+            onReceiveProgressSpeed.call((received / total), speed, eta);
+          }
+
+          if (onReceiveProgress != null && total > 0) {
+            onReceiveProgress(received, total);
+          }
+
+          if (skipped < downloadedLength) {
+            final remain = downloadedLength - skipped;
+            // စစ်ဆေး
+            if (chunk.length <= remain) {
+              skipped += chunk.length;
+              print("skip ${chunk.length} bytes");
+              return; // skip this chunk completely
+            } else {
+              // raf.setPositionSync(downloadedLength);
+              raf.writeFromSync(chunk.sublist(remain));
+              skipped += chunk.length;
+            }
+          } else {
+            raf.writeFromSync(chunk);
+          }
+        });
+
+        await raf.close();
+      }
+    } catch (e) {
+      onError?.call(e.toString());
+    }
+    return file;
+  }
+
   /// File upload with progress
-  Future<THttpResponse?> upload(
+  Future<TClientResponse?> upload(
     String path, {
     required File file,
     Map<String, String>? query,
@@ -217,7 +331,7 @@ class THttp {
       final response = await request.close().timeout(options.receiveTimeout);
       final responseBody = await response.transform(utf8.decoder).join();
 
-      return THttpResponse(
+      return TClientResponse(
         statusCode: response.statusCode,
         headers: {}, // headers convert if needed
         data: responseBody,
@@ -231,7 +345,7 @@ class THttp {
   }
 
   /// Internal request handler
-  Future<THttpResponse> _send(
+  Future<TClientResponse> _send(
     String method,
     String path, {
     Map<String, String>? query,
@@ -258,7 +372,7 @@ class THttp {
 
     client.close();
 
-    return THttpResponse(
+    return TClientResponse(
       statusCode: response.statusCode,
       headers: {},
       data: responseBody,

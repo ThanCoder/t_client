@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:t_http/t_http.dart';
+import 'index.dart';
+
 
 enum StreamProgressStatus { preparing, progress, done, error }
 
 class UploadStreamProgress {
   final int loaded;
   final int total;
-  final double progress; // 0..100
+  final double progress; // 0..1
   final String? errorMessage;
   final bool isCanceled;
   final StreamProgressStatus progressStatus;
@@ -42,7 +43,7 @@ class DownloadStreamProgress {
 }
 
 Stream<UploadStreamProgress> httpUploadStream(
-  THttp thttp, {
+  TClient client, {
   required String path,
   required File file,
   TCancelToken? cancelToken,
@@ -56,12 +57,12 @@ Stream<UploadStreamProgress> httpUploadStream(
           total: file.lengthSync(),
         ),
       );
-      await thttp.upload(
+      await client.upload(
         path,
         file: file,
         cancelToken: cancelToken,
         onUploadProgress: (sent, total) {
-          final progress = total > 0 ? (sent / total) * 100 : 0.0;
+          double progress = total > 0 ? (sent / total) : 0.0;
           controller.add(
             UploadStreamProgress(
               progressStatus: StreamProgressStatus.progress,
@@ -114,7 +115,7 @@ Stream<UploadStreamProgress> httpUploadStream(
 }
 
 Stream<DownloadStreamProgress> httpDownloadStream(
-  THttp thttp,
+  TClient client,
   String path, {
   required String savePath,
   TCancelToken? cancelToken,
@@ -128,7 +129,7 @@ Stream<DownloadStreamProgress> httpDownloadStream(
         DownloadStreamProgress(progressStatus: StreamProgressStatus.preparing),
       );
 
-      await thttp.download(
+      await client.download(
         path,
         savePath: savePath,
         cancelToken: cancelToken,

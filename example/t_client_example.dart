@@ -1,30 +1,40 @@
 import 'dart:io';
 
-import 'package:t_http/t_http.dart';
+import 'package:t_client/t_client.dart';
 
 void main() async {
-  final host = 'http://10.37.17.103:9000';
-  // final host = 'http://192.168.1.33:9000';
   final fileUrl =
-      'http://10.37.17.103:9000/download?path=/storage/emulated/0/Download/New%20Porns/Mi%20Es%20Infiel%20-%20Kourtney%20Love%20-%20EPORNER.mp4';
-  final thttp = THttp();
-  final downloadStream = thttp.downloadStream(
+      'http://10.37.17.103:9000/download?path=/storage/emulated/0/Movies/SavedMovies/The.Sandman.S02E07.Time.and.Night.REPACK.mp4';
+  final client = TClient();
+  await client.downloadResume(
     fileUrl,
-    savePath: '/home/than/Pictures/test.mp4',
-  );
-  downloadStream.listen(
-    (data) {
+    savePath: '/home/than/Pictures/${fileUrl.getName()}',
+    onError: (message) {
+      print('error: $message');
+    },
+    onReceiveProgressSpeed: (progress, speed, eta) {
       print(
-        'Progress: ${data.progress.toStringAsFixed(2)}% | Speed: ${data.speed.formatSpeed()} | ETA: ${data.eta?.inSeconds} S',
+        'Progress: ${(progress * 100).toStringAsFixed(2)}% | Speed: ${speed.formatSpeed()} | Left: ${eta?.toAutoTimeLabel()}',
       );
     },
-    onError: (msg) {
-      print('error: $msg');
-    },
-    onDone: () {
-      print('done');
-    },
   );
+  // final downloadStream = thttp.downloadStream(
+  //   fileUrl,
+  //   savePath: '/home/than/Pictures/test.mp4',
+  // );
+  // downloadStream.listen(
+  //   (data) {
+  //     print(
+  //       'Progress: ${data.progress.toStringAsFixed(2)}% | Speed: ${data.speed.formatSpeed()} | ETA: ${data.eta?.inSeconds} S',
+  //     );
+  //   },
+  //   onError: (msg) {
+  //     print('error: $msg');
+  //   },
+  //   onDone: () {
+  //     print('done');
+  //   },
+  // );
 
   // final res = await thttp.get(url);
   // print(res.data);

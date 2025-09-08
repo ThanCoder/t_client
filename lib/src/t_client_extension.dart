@@ -36,3 +36,38 @@ extension IntExtension on int {
     return toDouble().toFileSizeLabel(asFixed: asFixed);
   }
 }
+
+extension StringExtension on String {
+  String toCaptalize() {
+    if (isEmpty) return this;
+    return '${this[0].toUpperCase()}${substring(1, length)}';
+  }
+
+  String getName({bool withExt = true}) {
+    final name = split('/').last;
+    if (!withExt) {
+      return name.split('.').first;
+    }
+    return name;
+  }
+
+  String get getExt {
+    return split('/').last;
+  }
+}
+
+extension ParseDuration on Duration {
+  String toAutoTimeLabel() {
+    if (inMinutes > 60) {
+      return '$inHours Hours';
+    }
+    if (inSeconds > 60) {
+      return '$inMinutes Minutes';
+    }
+    if (inMilliseconds > 1000) {
+      return '$inSeconds S';
+    }
+
+    return '$inMilliseconds ms';
+  }
+}
