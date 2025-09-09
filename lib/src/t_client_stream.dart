@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'index.dart';
 
-
 enum StreamProgressStatus { preparing, progress, done, error }
 
 class UploadStreamProgress {
@@ -25,7 +24,8 @@ class UploadStreamProgress {
 }
 
 class DownloadStreamProgress {
-  final double progress; // 0..100
+  final int receive; // 0..100
+  final int total; // 0..100
   final double speed;
   final Duration? eta;
   final String? errorMessage;
@@ -36,7 +36,8 @@ class DownloadStreamProgress {
     required this.progressStatus,
     this.speed = 0.0,
     this.eta,
-    this.progress = 0,
+    this.receive = 0,
+    this.total = 0,
     this.errorMessage,
     this.isCanceled = false,
   });
@@ -135,12 +136,13 @@ Stream<DownloadStreamProgress> httpDownloadStream(
         token: token,
         query: query,
         headers: headers,
-        onReceiveProgressSpeed: (progress, speed, eta) {
+        onReceiveProgressSpeed: (receive, total, speed, eta) {
           controller.add(
             DownloadStreamProgress(
               progressStatus: StreamProgressStatus.progress,
               eta: eta,
-              progress: progress,
+              receive: receive,
+              total: total,
               speed: speed,
             ),
           );

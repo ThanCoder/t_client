@@ -14,7 +14,7 @@ typedef Interceptor =
 
 typedef OnReceiveProgressCallback = void Function(int received, int total);
 typedef OnReceiveProgressSpeedCallback =
-    void Function(double progress, double speed, Duration? eta);
+    void Function(int received, int total, double speed, Duration? eta);
 typedef OnCancelCallback = void Function(String message);
 
 class TClient {
@@ -155,7 +155,7 @@ class TClient {
             final eta = speed > 0
                 ? Duration(seconds: ((total - received) / speed).round())
                 : null;
-            onReceiveProgressSpeed.call((received / total), speed, eta);
+            onReceiveProgressSpeed.call(received, total, speed, eta);
           }
 
           if (onReceiveProgress != null && total > 0) {
@@ -195,7 +195,7 @@ class TClient {
             final eta = speed > 0
                 ? Duration(seconds: ((total - received) / speed).round())
                 : null;
-            onReceiveProgressSpeed.call((received / total), speed, eta);
+            onReceiveProgressSpeed.call(received, total, speed, eta);
           }
 
           if (onReceiveProgress != null && total > 0) {
