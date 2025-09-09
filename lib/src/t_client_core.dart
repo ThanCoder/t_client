@@ -135,7 +135,6 @@ class TClient {
           // cancel token
           if (token?.isCanceled ?? false) {
             raf.close();
-            client.close();
             if (token!.isCancelFileDelete) {
               file.deleteSync(); // Delete partial file
             }
@@ -176,7 +175,6 @@ class TClient {
           // cancel token
           if (token?.isCanceled ?? false) {
             raf.close();
-            client.close();
             if (token!.isCancelFileDelete) {
               file.deleteSync(); // Delete partial file
             }
@@ -288,7 +286,6 @@ class TClient {
       final fileStream = file.openRead();
       await for (var chunk in fileStream) {
         if (token?.isCanceled ?? false) {
-          client.close(force: true);
           onCancelCallback?.call(token!.onCancelMessage);
           throw Exception(token!.onCancelMessage);
         }
@@ -316,7 +313,6 @@ class TClient {
       TClientLogger.instance.showLog(e.toString(), tag: 'upload');
       onError?.call(e.toString());
     } finally {
-      client.close();
     }
     return null;
   }
@@ -347,7 +343,6 @@ class TClient {
     final response = await request.close().timeout(options.receiveTimeout);
     final responseBody = await response.transform(utf8.decoder).join();
 
-    client.close();
 
     return TClientResponse(
       statusCode: response.statusCode,
