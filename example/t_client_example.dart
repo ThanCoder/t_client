@@ -1,4 +1,4 @@
-import 'package:t_client/src/t_client_logger.dart';
+import 'package:t_client/src/internal.dart';
 import 'package:t_client/t_client.dart';
 
 void main() async {
@@ -10,6 +10,7 @@ void main() async {
 
   final fileUrl =
       'http://localhost:8080/download?path=/home/than/Videos/I.Am.What.I.Am.2021.mp4';
+  fileUrl.toCaptalize();
 
   final client = TClient();
   // await client.download(
