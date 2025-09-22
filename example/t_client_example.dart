@@ -14,7 +14,6 @@ void main() async {
   //proxy
   // final option = TClientOptions(proxy: 'http://192.168.1.1:8080');
 
-
   client.ioClient.findProxy = (uri) {
     return 'PROXY http://192.168.1.1:8080';
   };

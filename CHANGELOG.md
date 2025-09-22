@@ -1,3 +1,7 @@
+## 0.0.6
+
+- Fixed Some Error.
+
 ## 0.0.5
 
 - Add Document
