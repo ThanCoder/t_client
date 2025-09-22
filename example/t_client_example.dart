@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:t_client/src/internal.dart';
 import 'package:t_client/t_client.dart';
 
@@ -7,44 +9,58 @@ void main() async {
       print(message);
     },
   );
+  final client = TClient();
+
+  //proxy
+  // final option = TClientOptions(proxy: 'http://192.168.1.1:8080');
+
+
+  client.ioClient.findProxy = (uri) {
+    return 'PROXY http://192.168.1.1:8080';
+  };
 
   final fileUrl =
       'http://localhost:8080/download?path=/home/than/Videos/I.Am.What.I.Am.2021.mp4';
-  fileUrl.toCaptalize();
 
-  final client = TClient();
-  // await client.download(
-  //   fileUrl,
-  //   savePath: '/home/than/Pictures/${fileUrl.getName()}',
-  //   onError: (message) {
-  //     print('error: $message');
-  //   },
-  //   onReceiveProgressSpeed: (progress, speed, eta) {
-  //     print(
-  //       'Progress: ${(progress * 100).toStringAsFixed(2)}% | Speed: ${speed.formatSpeed()} | Left: ${eta?.toAutoTimeLabel()}',
-  //     );
-  //   },
-  // );
+  //post request
+  final res = await client.post('url', data: {'name': 'thancoder'});
+  //200,201 - success
+  res.statusCode;
+  //response
+  res.data;
+
+  await client.download(
+    fileUrl,
+    savePath: '/home/than/Pictures/${fileUrl.getName()}',
+    onError: (message) {
+      print('error: $message');
+    },
+    onReceiveProgressSpeed: (received, total, speed, eta) {
+      print(
+        'Progress: ${((received / total) * 100).toStringAsFixed(2)}% | Speed: ${speed.formatSpeed()} | Left: ${eta?.toAutoTimeLabel()}',
+      );
+    },
+  );
 
   // print('downloaded');
 
-  // final downloadStream = thttp.downloadStream(
-  //   fileUrl,
-  //   savePath: '/home/than/Pictures/test.mp4',
-  // );
-  // downloadStream.listen(
-  //   (data) {
-  //     print(
-  //       'Progress: ${data.progress.toStringAsFixed(2)}% | Speed: ${data.speed.formatSpeed()} | ETA: ${data.eta?.inSeconds} S',
-  //     );
-  //   },
-  //   onError: (msg) {
-  //     print('error: $msg');
-  //   },
-  //   onDone: () {
-  //     print('done');
-  //   },
-  // );
+  final downloadStream = client.downloadStream(
+    fileUrl,
+    savePath: '/home/than/Pictures/test.mp4',
+  );
+  downloadStream.listen(
+    (data) {
+      print(
+        'Progress: ${(data.receive / data.total).toStringAsFixed(2)}% | Speed: ${data.speed.formatSpeed()} | ETA: ${data.eta?.inSeconds} S',
+      );
+    },
+    onError: (msg) {
+      print('error: $msg');
+    },
+    onDone: () {
+      print('done');
+    },
+  );
 
   // final res = await thttp.get(url);
   // print(res.data);
@@ -59,29 +75,30 @@ void main() async {
   //     );
   //   },
   // );
-  // final url = 'http://10.37.17.103:9000/upload';
-  // await thttp.upload(
-  //   url,
-  //   file: File('/home/than/Pictures/mus.mp4'),
-  //   onUploadProgress: (sent, total) {
-  //     print('Progress: ${(sent / total) * 100}%');
-  //   },
-  // );
-  // final uploadStream = thttp.uploadStream(
-  //   url,
-  //   file: File('/home/than/Pictures/mus.mp4'),
-  // );
-  // uploadStream.listen(
-  //   (data) {
-  //     print(
-  //       'progress: ${data.progress.toStringAsFixed(2)}% | Status: ${data.progressStatus.name}',
-  //     );
-  //   },
-  //   onError: (msg) {
-  //     print('error: $msg');
-  //   },
-  //   onDone: () {
-  //     print('done');
-  //   },
-  // );
+  final url = 'http://10.37.17.103:9000/upload';
+  await client.upload(
+    url,
+    file: File('/home/than/Pictures/mus.mp4'),
+    onUploadProgress: (sent, total) {
+      print('Progress: ${(sent / total) * 100}%');
+    },
+  );
+
+  final uploadStream = client.uploadStream(
+    url,
+    file: File('/home/than/Pictures/mus.mp4'),
+  );
+  uploadStream.listen(
+    (data) {
+      print(
+        'progress: ${data.progress.toStringAsFixed(2)}% | Status: ${data.progressStatus.name}',
+      );
+    },
+    onError: (msg) {
+      print('error: $msg');
+    },
+    onDone: () {
+      print('done');
+    },
+  );
 }

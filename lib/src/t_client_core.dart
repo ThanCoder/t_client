@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:t_client/src/t_client_logger.dart';
-
 import 'index.dart';
 
 typedef Interceptor =
@@ -19,19 +17,19 @@ typedef OnCancelCallback = void Function(String message);
 
 class TClient {
   final TClientOptions options;
-  final HttpClient client;
+  final HttpClient ioClient;
 
   TClient({HttpClient? client, TClientOptions? options})
     : options = options ?? const TClientOptions(),
-      client = HttpClient() {
+      ioClient = HttpClient() {
     // Apply proxy if provided
     if (this.options.proxy != null) {
-      this.client.findProxy = (Uri uri) {
+      ioClient.findProxy = (Uri uri) {
         return 'PROXY ${this.options.proxy}';
       };
     }
     // Optional: global client settings
-    this.client.connectionTimeout = this.options.connectTimeout;
+    ioClient.connectionTimeout = this.options.connectTimeout;
   }
 
   /// GET request
@@ -75,6 +73,9 @@ class TClient {
 
   ///
   /// File download with progress
+  /// 
+  /// `supported partial download [206]`
+  ///
   ///
   Future<File> download(
     String path, {
@@ -95,7 +96,7 @@ class TClient {
         '${options.baseUrl}$path',
       ).replace(queryParameters: query);
       // timeout
-      final request = await client.getUrl(uri).timeout(options.sendTimeout);
+      final request = await ioClient.getUrl(uri).timeout(options.sendTimeout);
 
       // Default + custom headers
       final allHeaders = {...options.headers, ...?headers};
@@ -246,7 +247,7 @@ class TClient {
         '${options.baseUrl}$path',
       ).replace(queryParameters: query);
       // timeout
-      final request = await client.postUrl(uri).timeout(options.sendTimeout);
+      final request = await ioClient.postUrl(uri).timeout(options.sendTimeout);
       // Merge headers
       final allHeaders = {...options.headers, ...?headers};
       allHeaders.forEach((key, value) => request.headers.set(key, value));
@@ -329,7 +330,7 @@ class TClient {
       '${options.baseUrl}$path',
     ).replace(queryParameters: query);
     // timeout
-    final request = await client
+    final request = await ioClient
         .openUrl(method, uri)
         .timeout(options.sendTimeout);
     // Default + custom headers

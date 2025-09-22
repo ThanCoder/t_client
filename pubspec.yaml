@@ -2,7 +2,7 @@ name: t_client
 description: A lightweight Dart HTTP client library, designed like Dio,
   supporting request/response interceptors, upload/download progress,
   cancel tokens, timeout management, and multipart file upload/download.
-version: 0.0.4
+version: 0.0.5
 repository: https://github.com/ThanCoder/t_client
 
 environment:
