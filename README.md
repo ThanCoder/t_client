@@ -1,6 +1,36 @@
-# THttp
+# THttp 0.1.6
 
 ## Dart Core Package
+
+## THttpHeaderBuilder
+
+```Dart
+final headers = THttpHeaderBuilder();
+headers.setContentType(type: HeaderContentType.applicationJson);
+headers.setAccept(accept: HeaderAccept.applicationJson);
+headers.setAuthorization('i am token');
+headers.setUserAgent(agent: HeaderUserAgent.androidApp);
+headers.setOrigin('[origin]');
+headers.setCookie('[value]');
+headers.setCustom('[key]', '[value]');
+headers.setXApiKey('[value]');
+headers.setReferer('[value]');
+
+print(headers.getMap);
+//result
+/*{
+    Content-Type: application/json,
+    Accept: application/json,
+    Authorization: i am token,
+    User-Agent: MyApp/1.0.0 (Linux; Android 13),
+    Origin: [origin],
+    Cookie: [value],
+    [key]: [value],
+    X-Api-Key: [value],
+    Referer: [value]
+}
+*/
+```
 
 ## Logger
 
