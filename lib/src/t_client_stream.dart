@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:t_client/src/extensions/client_file_extensions.dart';
+
 import 'index.dart';
 
 enum StreamProgressStatus { preparing, progress, done, error }

@@ -1,3 +1,8 @@
+# 0.2.0
+
+- Fixed Some Error.
+- Changed Some Codes.
+
 ## 0.1.6
 
 - Added `THttpHeaderBuilder`

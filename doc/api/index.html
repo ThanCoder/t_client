@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, user-scalable=no">
+  <meta name="description" content="t_client API docs, for the Dart programming language.">
+  <title>t_client - Dart API docs</title>
+
+
+  
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+  
+  <link rel="stylesheet" href="static-assets/github.css?v1">
+  <link rel="stylesheet" href="static-assets/styles.css?v1">
+  <link rel="icon" href="static-assets/favicon.png?v1">
+  
+</head>
+
+<body data-base-href="" data-using-base-href="false" class="light-theme">
+<div id="overlay-under-drawer"></div>
+<header id="title">
+  <span id="sidenav-left-toggle" class="material-symbols-outlined" role="button" tabindex="0">menu</span>
+  <ol class="breadcrumbs gt-separated dark hidden-xs">
+    <li class="self-crumb">t_client package</li>
+  </ol>
+  <div class="self-name">t_client</div>
+  <form class="search navbar-right" role="search">
+    <input type="text" id="search-box" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+  <button class="toggle" id="theme-button" title="Toggle between light and dark mode" aria-label="Light and dark mode toggle">
+    <span id="dark-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      dark_mode
+    </span>
+    <span id="light-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      light_mode
+    </span>
+  </button>
+</header>
+<main>
+  <div id="dartdoc-main-content" class="main-content">
+      
+<section class="desc markdown">
+  <h1 id="tclient">TClient</h1>
+<h2 id="dart-core-wrapper-package">Dart Core Wrapper Package</h2>
+<h3 id="stream-request">Stream Request</h3>
+<pre class="language-dart"><code class="language-dart">final client = TClient();
+final cancelT = CancelToken();
+
+final resStream = client.streamRequest(
+    Method.post,
+    'http://localhost:11434/api/generate', // Ollama local port
+    body: {
+        "model": "gemma3:4b",
+        "prompt": "Why is the sky blue?",
+        "stream": true, // ဒါက အရေးကြီးဆုံး အချက်ပါ
+    },
+    cancelToken: cancelT,
+);
+
+Future.delayed(Duration(seconds: 10)).then((_) {
+    cancelT.cancel();
+    print('call cancel');
+});
+
+await for (var res in resStream) {
+    print(res.data);
+    // Ollama က JSON string တွေ ပို့မှာဖြစ်လို့ decode ပြန်လုပ်ရပါမယ်
+    // final decoded = jsonDecode(res.data);
+    // stdout.write(
+    //   decoded['response'],
+    // ); // စာလုံးလေးတွေ တစ်လုံးချင်း တက်လာပါလိမ့်မယ်
+}
+print('stream end');
+</code></pre>
+<h2 id="thttpheaderbuilder">THttpHeaderBuilder</h2>
+<pre class="language-Dart"><code class="language-Dart">final headers = THttpHeaderBuilder();
+headers.setContentType(type: HeaderContentType.applicationJson);
+headers.setAccept(accept: HeaderAccept.applicationJson);
+headers.setAuthorization('i am token');
+headers.setUserAgent(agent: HeaderUserAgent.androidApp);
+headers.setOrigin('[origin]');
+headers.setCookie('[value]');
+headers.setCustom('[key]', '[value]');
+headers.setXApiKey('[value]');
+headers.setReferer('[value]');
+
+print(headers.getMap);
+//result
+/*{
+    Content-Type: application/json,
+    Accept: application/json,
+    Authorization: i am token,
+    User-Agent: MyApp/1.0.0 (Linux; Android 13),
+    Origin: [origin],
+    Cookie: [value],
+    [key]: [value],
+    X-Api-Key: [value],
+    Referer: [value]
+}
+*/
+</code></pre>
+<h2 id="logger">Logger</h2>
+<pre class="language-Dart"><code class="language-Dart">//main
+TClientLogger.instance.init(
+    onMessageLog: (message) {
+        print(message);
+    },
+);
+</code></pre>
+<h2 id="proxy">Proxy</h2>
+<pre class="language-Dart"><code class="language-Dart">//option proxy
+final option = TClientOptions(proxy: 'http://192.168.1.1:8080');
+final client = TClient(options: option);
+
+//set proxy
+  client.setProxy('[proxy url]');
+
+//Authentication ပါတဲ့ Proxy
+client.ioClient.authenticateProxy = (host, port, scheme, realm) {
+    client.ioClient.addProxyCredentials(
+        host,
+        port,
+        realm!,
+        HttpClientBasicCredentials('username', 'password'),
+    );
+    return Future.value(true);
+};
+
+/*
+"DIRECT"
+for using a direct connection or
+
+"PROXY host:port"
+for using the proxy server host on port port.
+
+A configuration can contain several configuration elements separated by semicolons, e.g.
+
+"PROXY host:port; PROXY host2:port2; DIRECT"
+*/
+client.ioClient.findProxy = (uri) {
+    return 'PROXY http://192.168.1.1:8080';
+};
+</code></pre>
+<h2 id="client-response">Client Response</h2>
+<pre class="language-Dart"><code class="language-Dart">final res =await client.get('url');
+//respnse data
+res.data;
+
+//post request
+final res =await client.post('url',data: {'name':'thancoder'});
+//200,201 - success
+res.statusCode;
+//response
+res.data;
+
+</code></pre>
+<h2 id="download">Download</h2>
+<pre class="language-Dart"><code class="language-Dart">final client = TClient();
+await client.download(
+    fileUrl,
+    savePath: '/home/than/Pictures/${fileUrl.getName()}',
+    onError: (message) {
+        print('error: $message');
+    },
+    onReceiveProgressSpeed: (received, total, speed, eta) {
+        print(
+        'Progress: ${((received / total) * 100).toStringAsFixed(2)}% | Speed: ${speed.formatSpeed()} | Left: ${eta?.toAutoTimeLabel()}',
+        );
+    },
+);
+
+//Stream
+final downloadStream = client.downloadStream(
+    fileUrl,
+    savePath: '/home/than/Pictures/test.mp4',
+    );
+    downloadStream.listen(
+    (data) {
+        print(
+        'Progress: ${(data.receive / data.total).toStringAsFixed(2)}% | Speed: ${data.speed.formatSpeed()} | ETA: ${data.eta?.inSeconds} S',
+        );
+    },
+    onError: (msg) {
+        print('error: $msg');
+    },
+    onDone: () {
+        print('done');
+    },
+);
+
+</code></pre>
+<h2 id="upload">Upload</h2>
+<pre class="language-Dart"><code class="language-Dart">final client = TClient();
+final url = 'http://10.37.17.103:9000/upload';
+await client.upload(
+    url,
+    file: File('/home/than/Pictures/mus.mp4'),
+    onUploadProgress: (sent, total) {
+        print('Progress: ${(sent / total) * 100}%');
+    },
+);
+
+//Stream
+final uploadStream = client.uploadStream(
+    url,
+    file: File('/home/than/Pictures/mus.mp4'),
+    );
+    uploadStream.listen(
+    (data) {
+        print(
+        'progress: ${data.progress.toStringAsFixed(2)}% | Status: ${data.progressStatus.name}',
+        );
+    },
+    onError: (msg) {
+        print('error: $msg');
+    },
+    onDone: () {
+        print('done');
+    },
+);
+</code></pre>
+</section>
+
+
+      <section class="summary">
+          <h2>Libraries</h2>
+        <dl>
+          <dt id="t_client">
+  <span class="name"><a href="t_client/">t_client</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+        </dl>
+      </section>
+  </div> <!-- /.main-content -->
+  <div id="dartdoc-sidebar-left" class="sidebar sidebar-offcanvas-left">
+    <!-- The search input and breadcrumbs below are only responsively visible at low resolutions. -->
+<header id="header-search-sidebar" class="hidden-l">
+  <form class="search-sidebar" role="search">
+    <input type="text" id="search-sidebar" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+</header>
+<ol class="breadcrumbs gt-separated dark hidden-l" id="sidebar-nav">
+    <li class="self-crumb">t_client package</li>
+</ol>
+
+    <h5 class="hidden-xs"><span class="package-name">t_client</span> <span class="package-kind">package</span></h5>
+    <ol>
+      <li class="section-title">Libraries</li>
+      <li><a href="t_client/">t_client</a></li>
+</ol>
+
+  </div>
+  <div id="dartdoc-sidebar-right" class="sidebar sidebar-offcanvas-right">
+  </div>
+</main>
+<footer>
+  <span class="no-break">
+    t_client
+      0.2.0
+  </span>
+  
+</footer>
+
+
+<script src="static-assets/highlight.pack.js?v1"></script>
+<script src="static-assets/docs.dart.js"></script>
+
+</body>
+</html>
+

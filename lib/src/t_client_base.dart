@@ -1,5 +1,3 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
-
 class TClientOptions {
   final String baseUrl;
   final Map<String, String> headers;
@@ -27,6 +25,17 @@ class TClientResponse {
     required this.headers,
     required this.data,
   });
+}
+
+///
+/// Cancel Token
+///
+class CancelToken {
+  bool _isCanceled = false;
+  bool get isCanceled => _isCanceled;
+  void cancel() {
+    _isCanceled = true;
+  }
 }
 
 class TClientToken {
@@ -57,4 +66,21 @@ class TClientToken {
   }
 }
 
-// header
+///
+/// ### Stream Class
+///
+class TClientResponseStream {
+  final int statusCode;
+  final String data;
+  final Map<String, String>? headers;
+
+  TClientResponseStream({
+    required this.statusCode,
+    required this.data,
+    this.headers,
+  });
+
+  @override
+  String toString() =>
+      'TClientResponseStream(statusCode: $statusCode, data: $data)';
+}

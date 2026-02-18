@@ -1,6 +1,39 @@
-# THttp 0.1.6
+# TClient
 
-## Dart Core Package
+## Dart Core Wrapper Package
+
+### Stream Request
+
+```dart
+final client = TClient();
+final cancelT = CancelToken();
+
+final resStream = client.streamRequest(
+    Method.post,
+    'http://localhost:11434/api/generate', // Ollama local port
+    body: {
+        "model": "gemma3:4b",
+        "prompt": "Why is the sky blue?",
+        "stream": true, // ဒါက အရေးကြီးဆုံး အချက်ပါ
+    },
+    cancelToken: cancelT,
+);
+
+Future.delayed(Duration(seconds: 10)).then((_) {
+    cancelT.cancel();
+    print('call cancel');
+});
+
+await for (var res in resStream) {
+    print(res.data);
+    // Ollama က JSON string တွေ ပို့မှာဖြစ်လို့ decode ပြန်လုပ်ရပါမယ်
+    // final decoded = jsonDecode(res.data);
+    // stdout.write(
+    //   decoded['response'],
+    // ); // စာလုံးလေးတွေ တစ်လုံးချင်း တက်လာပါလိမ့်မယ်
+}
+print('stream end');
+```
 
 ## THttpHeaderBuilder
 
@@ -49,8 +82,21 @@ TClientLogger.instance.init(
 //option proxy
 final option = TClientOptions(proxy: 'http://192.168.1.1:8080');
 final client = TClient(options: option);
-//set client
-final client = TClient();
+
+//set proxy
+  client.setProxy('[proxy url]');
+
+//Authentication ပါတဲ့ Proxy
+client.ioClient.authenticateProxy = (host, port, scheme, realm) {
+    client.ioClient.addProxyCredentials(
+        host,
+        port,
+        realm!,
+        HttpClientBasicCredentials('username', 'password'),
+    );
+    return Future.value(true);
+};
+
 /*
 "DIRECT"
 for using a direct connection or
