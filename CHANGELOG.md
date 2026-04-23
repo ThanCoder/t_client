@@ -1,3 +1,7 @@
+# 0.3.0
+
+- Added `getContentLength` Method For `Check For Url Content Length`
+
 # 0.2.0
 
 - Fixed Some Error.

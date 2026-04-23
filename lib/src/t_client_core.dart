@@ -78,6 +78,30 @@ class TClient {
   }
 
   ///
+  /// Opens an HTTP connection using the HEAD method.
+  ///
+  ///The URL to use is specified in [url].
+  ///
+  Future<HttpClientResponse> getContentLength(
+    String url, {
+    Duration? sendTimeout,
+  }) async {
+    // options ထဲက default ကို သုံးမလား၊ parameter က custom ကို သုံးမလား ရွေးမယ်
+    final effectiveSendTimeout = sendTimeout ?? options.sendTimeout;
+
+    final request = await ioClient
+        .headUrl(Uri.parse(url))
+        .timeout(effectiveSendTimeout);
+
+    // Request ကို ပိတ်ပြီး Response ကို စောင့်တာ
+    final response = await request.close();
+
+    // Content Length ကို ရယူခြင်း
+    // int length = response.contentLength;
+    return response;
+  }
+
+  ///
   /// ### sendRequest
   ///
   Future<TClientResponse> sendRequest(
