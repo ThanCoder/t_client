@@ -1,3 +1,3 @@
 library;
 
-export 'src/index.dart';
+export 'src/core/index.dart';
